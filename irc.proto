@@ -1,0 +1,42 @@
+syntax = "proto3";
+package ircservice;
+
+option java_package = "ircservice";
+option java_multiple_files = true;
+
+message IRCMessage {
+	string nick = 1;
+	string content = 2;
+	int64 timestamp = 3;
+}
+
+message JoinRequest {
+	string channelName = 1;
+}
+message JoinReply {
+	bool isNew = 1;
+}
+
+message RetrieveRequest {
+	string channelName = 1;
+	int64 timestamp = 2;
+}
+message RetrieveReply {
+	repeated IRCMessage msgs = 1;
+}
+
+message PostMessageRequest {
+	string channelName = 1;
+	string nick = 2;
+	string theMessage = 3;
+	int64 timestamp = 4;
+}
+message PostMessageReply {
+	bool isSuccess = 1;
+}
+
+service IRCService {
+	rpc joinChannel(JoinRequest) returns (JoinReply);
+	rpc getMessages(RetrieveRequest) returns (RetrieveReply);
+	rpc sendMessage(PostMessageRequest) returns (PostMessageReply);
+}
