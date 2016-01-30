@@ -19,11 +19,16 @@ package ircclient;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import ircservice.IRCMessage;
 import ircservice.IRCServiceGrpc;
 import ircservice.JoinReply;
 import ircservice.JoinRequest;
 import ircservice.PostMessageReply;
 import ircservice.PostMessageRequest;
+import ircservice.RetrieveReply;
+import ircservice.RetrieveRequest;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -41,6 +46,9 @@ public class IRCClient {
 
     private final ManagedChannel channel;
     private final IRCServiceGrpc.IRCServiceBlockingStub blockingStub;
+
+    private Thread updaterThread;
+    private static volatile boolean updater = true;
 
     /**
      * Construct client connecting to HelloWorld server at {@code host:port}.
@@ -78,6 +86,60 @@ public class IRCClient {
         }
     }
 
+    public List<String> retrieveMsg(String channelName, long timestamp) {
+        try {
+            List<String> ret = new ArrayList<>();
+            RetrieveRequest retReq = RetrieveRequest.newBuilder().setChannelName(channelName).setTimestamp(timestamp).build();
+            RetrieveReply reply = blockingStub.getMessages(retReq);
+            for (IRCMessage m : reply.getMsgsList()) {
+                    String build;
+                    build = "[" + channelName + "]" + "(" + m.getNick() + ") " + m.getContent();
+                    ret.add(build);
+                    if (ClientData.getChannelState(channelName).LastMsgTimestamp < m.getTimestamp()) {
+                        ClientData.getChannelState(channelName).LastMsgTimestamp = m.getTimestamp();
+                    }
+            }
+            return ret;
+        } catch (RuntimeException e) {
+            logger.log(Level.WARNING, "RPC failed", e);
+            return null;
+        }
+    }
+
+    public void clientUpdater() {
+        //New thread to run periodic check
+        //check whether important thing has been set else do not run
+
+        updaterThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (updater) {
+                    try {
+                        if (!ClientData.NICKNAME.equals("")) {
+                            for (ChannelState currentChannel : ClientData.JOINED_CHANNELS) {
+                                List<String> recv;
+                                try {
+                                    //RPC and display message to stdout
+                                    recv = retrieveMsg(currentChannel.ChannelName, currentChannel.LastMsgTimestamp);
+
+                                    for (String currentString : recv) {
+                                        System.out.println(currentString);
+                                    }
+                                } catch (Exception ex) {
+                                    System.err.println("Exception in updater");
+                                    updater = false;
+                                }
+                            }
+                        }
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                    }
+                }
+            }
+        });
+        updaterThread.start();
+    }
+
     /**
      * Greet server. If provided, the first element of {@code args} is the name
      * to use in the greeting.
@@ -91,7 +153,7 @@ public class IRCClient {
             Scanner userInput;
             boolean exit = false;
             String input;
-
+            client.clientUpdater();
             //Run the main loop here
             userInput = new Scanner(System.in);
             while (!exit) {
@@ -164,6 +226,7 @@ public class IRCClient {
             }
 
         } finally {
+            updater = false; //shuts thread
             client.shutdown();
         }
     }

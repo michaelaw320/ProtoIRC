@@ -42,6 +42,8 @@ public class IRCServiceGrpcHandler implements IRCServiceGrpc.IRCService {
 
     @Override
     public void getMessages(RetrieveRequest request, StreamObserver<RetrieveReply> responseObserver) {
+        responseObserver.onNext(mGetMessages(request));
+        responseObserver.onCompleted();
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -74,14 +76,26 @@ public class IRCServiceGrpcHandler implements IRCServiceGrpc.IRCService {
         } else {
             IRCMessage msg = IRCMessage.newBuilder().setNick(nick).setContent(theMessage).setTimestamp(timestamp).build();
             chan.Messages.add(msg);
-                for (Channel ch : ServerData.CHANNELS) {
-                    System.out.println("--");
-                    System.out.println(ch.Name);
-                    for (IRCMessage m : ch.Messages) {
-                        System.out.println(m.getNick()+ ": "+ m.getContent()+ "; time:" + m.getTimestamp());
-                    }
-                }
             return PostMessageReply.newBuilder().setIsSuccess(true).build();
+        }
+    }
+
+    private RetrieveReply mGetMessages(RetrieveRequest request) {
+        String channelName = request.getChannelName();
+        long timestamp = request.getTimestamp();
+        Channel chan = ServerData.getChannel(channelName);
+        if (chan.Name.equals("NX")) {
+            //ignore it for the time being
+            IRCMessage nil = IRCMessage.newBuilder().setContent("NX").setNick("NX").setTimestamp(0).build();
+            return RetrieveReply.newBuilder().addMsgs(nil).build();
+        } else {
+            //return messages in channel that is newer than specified timestamp
+            RetrieveReply.Builder ret = RetrieveReply.newBuilder();
+            for (IRCMessage m : chan.Messages) {
+                if (m.getTimestamp() > timestamp)
+                    ret.addMsgs(m);
+            }
+            return ret.build();
         }
     }
     

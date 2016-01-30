@@ -62,7 +62,7 @@ public class ClientData {
 
 class ChannelState {
     public String ChannelName;
-    public int LastMsgTimestamp;
+    public long LastMsgTimestamp;
     
     public ChannelState(String name) {
         ChannelName = name;
