@@ -17,10 +17,42 @@
  */
 package ircserver;
 
+import ircservice.IRCMessage;
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  *
  * @author Michael
  */
 public class ServerData {
+    public static List<Channel> CHANNELS = new ArrayList<>();
+    public static boolean isChannelExist(String channelName) {
+        boolean exist = false;
+        for(Channel currentChannel : CHANNELS) {
+            if (currentChannel.Name.equals(channelName)) {
+                exist = true;
+                break;
+            }
+        }
+        return exist;
+    }
+    public static Channel getChannel(String channelName) {
+        for(Channel currentChannel : CHANNELS) {
+            if (currentChannel.Name.equals(channelName)) {
+                return currentChannel;
+            }
+        }
+        return new Channel("NX");
+    }
+}
+
+class Channel {
+    public String Name;
+    public List<IRCMessage> Messages;
     
+    public Channel(String chanName) {
+        Name = chanName;
+        Messages = new ArrayList<>();
+    }
 }

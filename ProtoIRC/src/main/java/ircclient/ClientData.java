@@ -17,10 +17,55 @@
  */
 package ircclient;
 
+import java.util.ArrayList;
+
 /**
  *
  * @author Michael
  */
 public class ClientData {
+    public static String NICKNAME = "";
+    public static ArrayList<ChannelState> JOINED_CHANNELS = new ArrayList<>();
     
+    public static boolean isAlreadyJoin(String channelName) {
+        boolean joined = false;
+        for(ChannelState cur : JOINED_CHANNELS) {
+            if (cur.ChannelName.equals(channelName)) {
+                joined = true;
+                break;
+            } 
+        }
+        return joined;
+    }
+    
+    public static boolean removeChannel(String channelName) {
+        boolean removed = false;
+        for(ChannelState cur : JOINED_CHANNELS) {
+            if (cur.ChannelName.equals(channelName)) {
+                JOINED_CHANNELS.remove(cur);
+                removed = true;
+                break;
+            } 
+        }
+        return removed;
+    }
+    
+    public static ChannelState getChannelState(String channelName) {
+        for(ChannelState cur : JOINED_CHANNELS) {
+            if (cur.ChannelName.equals(channelName)) {
+                return cur;
+            } 
+        }
+        return new ChannelState("NX");
+    }
+}
+
+class ChannelState {
+    public String ChannelName;
+    public int LastMsgTimestamp;
+    
+    public ChannelState(String name) {
+        ChannelName = name;
+        LastMsgTimestamp = (int) (System.currentTimeMillis() / 1000);
+    }
 }

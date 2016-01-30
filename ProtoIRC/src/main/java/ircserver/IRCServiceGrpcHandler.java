@@ -25,6 +25,8 @@ import ircservice.PostMessageReply;
 import ircservice.PostMessageRequest;
 import ircservice.RetrieveReply;
 import ircservice.RetrieveRequest;
+import ircserver.ServerData;
+import ircservice.IRCMessage;
 
 /**
  *
@@ -34,7 +36,8 @@ public class IRCServiceGrpcHandler implements IRCServiceGrpc.IRCService {
 
     @Override
     public void joinChannel(JoinRequest request, StreamObserver<JoinReply> responseObserver) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        responseObserver.onNext(mJoinChannel(request));
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -44,7 +47,42 @@ public class IRCServiceGrpcHandler implements IRCServiceGrpc.IRCService {
 
     @Override
     public void sendMessage(PostMessageRequest request, StreamObserver<PostMessageReply> responseObserver) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        responseObserver.onNext(mSendMessage(request));
+        responseObserver.onCompleted();
+    }
+
+    private JoinReply mJoinChannel(JoinRequest request) {
+        String channelName = request.getChannelName();
+        if (ServerData.isChannelExist(channelName)) {
+            return JoinReply.newBuilder().setIsNew(false).build();
+        } else {
+            Channel chan = new Channel(channelName);
+            ServerData.CHANNELS.add(chan);
+            return JoinReply.newBuilder().setIsNew(true).build();
+        }
+    }
+
+    private PostMessageReply mSendMessage(PostMessageRequest request) {
+        String channelName = request.getChannelName();
+        String nick = request.getNick();
+        String theMessage = request.getTheMessage();
+        long timestamp = request.getTimestamp();
+        Channel chan = ServerData.getChannel(channelName);
+        if (chan.Name.equals("NX")) {
+            //Channel not exist, return error
+            return PostMessageReply.newBuilder().setIsSuccess(false).build();
+        } else {
+            IRCMessage msg = IRCMessage.newBuilder().setNick(nick).setContent(theMessage).setTimestamp(timestamp).build();
+            chan.Messages.add(msg);
+                for (Channel ch : ServerData.CHANNELS) {
+                    System.out.println("--");
+                    System.out.println(ch.Name);
+                    for (IRCMessage m : ch.Messages) {
+                        System.out.println(m.getNick()+ ": "+ m.getContent()+ "; time:" + m.getTimestamp());
+                    }
+                }
+            return PostMessageReply.newBuilder().setIsSuccess(true).build();
+        }
     }
     
 }
